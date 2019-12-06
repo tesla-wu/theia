@@ -16,6 +16,8 @@
 
 import { Event } from '@theia/core';
 import { BaseWidget } from '@theia/core/lib/browser';
+import { TerminalProcessInfo } from '../../common/base-terminal-protocol';
+import { CommandLineOptions } from '@theia/process/lib/common/shell-command-builder';
 
 /**
  * Terminal UI widget.
@@ -23,6 +25,8 @@ import { BaseWidget } from '@theia/core/lib/browser';
 export abstract class TerminalWidget extends BaseWidget {
 
     abstract processId: Promise<number>;
+
+    abstract processInfo: Promise<TerminalProcessInfo>;
 
     /**
      * Start terminal and return terminal id.
@@ -35,6 +39,17 @@ export abstract class TerminalWidget extends BaseWidget {
      * @param text - text content.
      */
     abstract sendText(text: string): void;
+
+    /**
+     * Resolves when the command is successfully sent, this doesn't mean that it
+     * was evaluated. Might reject if terminal wasn't properly started yet.
+     *
+     * Note that this method will try to escape your arguments as if it was
+     * someone inputting everything in a shell.
+     *
+     * Supported shells: `bash`, `cmd.exe`, `wsl.exe`, `pwsh/powershell.exe`
+     */
+    abstract executeCommand(commandOptions: CommandLineOptions): Promise<void>;
 
     abstract onDidOpen: Event<void>;
 
