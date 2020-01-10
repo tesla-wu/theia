@@ -14,6 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
+// tslint:disable-next-line:no-implicit-dependencies
 import 'webdriverio';
 import { TopPanel } from '../top-panel/top-panel';
 import { LeftPanel } from '../left-panel/left-panel';

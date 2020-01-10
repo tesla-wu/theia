@@ -23,11 +23,11 @@
     "theia": "./bin/theia"
   },
   "scripts": {
-    "prepare": "yarn run clean && yarn build",
+    "prepare": "yarn clean && yarn build",
+    "lint": "theiaext lint",
     "clean": "rimraf lib",
     "build": "tsc -p compile.tsconfig.json",
-    "watch": "yarn build -w",
-    "test": "echo 'skip'"
+    "watch": "yarn build -w"
   },
   "dependencies": {
     "@theia/application-manager": "^0.14.0",
