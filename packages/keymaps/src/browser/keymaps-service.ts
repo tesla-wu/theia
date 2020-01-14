@@ -17,29 +17,13 @@
 import { inject, injectable, postConstruct } from 'inversify';
 import URI from '@theia/core/lib/common/uri';
 import { ResourceProvider, Resource } from '@theia/core/lib/common';
-import { Keybinding, KeybindingRegistry, KeybindingScope, OpenerService, open, WidgetOpenerOptions, Widget } from '@theia/core/lib/browser';
+import { OpenerService, open, WidgetOpenerOptions, Widget } from '@theia/core/lib/browser';
+import { KeybindingRegistry, KeybindingScope } from '@theia/core/lib/browser/keybinding';
+import { Keybinding } from '@theia/core/lib/common/keybinding';
 import { UserStorageUri } from '@theia/userstorage/lib/browser';
 import { KeymapsParser } from './keymaps-parser';
 import * as jsoncparser from 'jsonc-parser';
-import { Emitter } from '@theia/core/lib/common/';
-
-/**
- * Representation of a JSON keybinding.
- */
-export interface KeybindingJson {
-    /**
-     * The keybinding command.
-     */
-    command: string,
-    /**
-     * The actual keybinding.
-     */
-    keybinding: string,
-    /**
-     * The keybinding context.
-     */
-    context: string,
-}
+import { Emitter } from '@theia/core/lib/common/event';
 
 @injectable()
 export class KeymapsService {
@@ -109,25 +93,45 @@ export class KeymapsService {
 
     /**
      * Set the keybinding in the JSON.
-     * @param keybindingJson the JSON keybindings.
+     * @param newKeybinding the JSON keybindings.
      */
-    async setKeybinding(keybindingJson: KeybindingJson): Promise<void> {
+    async setKeybinding(newKeybinding: Keybinding, oldKeybinding: string): Promise<void> {
         if (!this.resource.saveContents) {
             return;
         }
         const content = await this.resource.readContents();
-        const keybindings: KeybindingJson[] = content ? jsoncparser.parse(content) : [];
-        let updated = false;
-        for (let i = 0; i < keybindings.length; i++) {
-            if (keybindings[i].command === keybindingJson.command) {
-                updated = true;
-                keybindings[i].keybinding = keybindingJson.keybinding;
+        const keybindings: Keybinding[] = content ? jsoncparser.parse(content) : [];
+        let newAdded = false;
+        let oldRemoved = false;
+        for (const keybinding of keybindings) {
+            if (keybinding.command === newKeybinding.command &&
+                (keybinding.context || '') === (newKeybinding.context || '') &&
+                (keybinding.when || '') === (newKeybinding.when || '')) {
+                newAdded = true;
+                keybinding.keybinding = newKeybinding.keybinding;
+            }
+            if (keybinding.command === '-' + newKeybinding.command &&
+                keybinding.keybinding === oldKeybinding &&
+                (keybinding.context || '') === (newKeybinding.context || '') &&
+                (keybinding.when || '') === (newKeybinding.when || '')) {
+                oldRemoved = false;
             }
         }
-        if (!updated) {
-            const item: KeybindingJson = { ...keybindingJson };
-            keybindings.push(item);
+        if (!newAdded) {
+            keybindings.push(newKeybinding);
         }
+        if (!oldRemoved) {
+            keybindings.push({
+                command: '-' + newKeybinding.command,
+                // TODO key: oldKeybinding, see https://github.com/eclipse-theia/theia/issues/6879
+                keybinding: oldKeybinding,
+                context: newKeybinding.context,
+                when: newKeybinding.when
+            });
+        }
+        // TODO use preference values to get proper json settings
+        // TODO handle dirty models properly
+        // TODO handle race conditions properly
         await this.resource.saveContents(JSON.stringify(keybindings, undefined, 4));
     }
 
@@ -140,22 +144,13 @@ export class KeymapsService {
             return;
         }
         const content = await this.resource.readContents();
-        const keybindings: KeybindingJson[] = content ? jsoncparser.parse(content) : [];
-        const filtered = keybindings.filter(a => a.command !== commandId);
+        const keybindings: Keybinding[] = content ? jsoncparser.parse(content) : [];
+        const removedCommand = '-' + commandId;
+        const filtered = keybindings.filter(a => a.command !== commandId && a.command !== removedCommand);
+        // TODO use preference values to get proper json settings
+        // TODO handle dirty models properly
+        // TODO handle race conditions properly
         await this.resource.saveContents(JSON.stringify(filtered, undefined, 4));
-    }
-
-    /**
-     * Get the list of keybindings from the JSON.
-     *
-     * @returns the list of keybindings in JSON.
-     */
-    async getKeybindings(): Promise<KeybindingJson[]> {
-        if (!this.resource.saveContents) {
-            return [];
-        }
-        const content = await this.resource.readContents();
-        return content ? jsoncparser.parse(content) : [];
     }
 
 }

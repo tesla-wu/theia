@@ -22,7 +22,7 @@ import { CommandRegistry, Emitter, Event } from '@theia/core/lib/common';
 import { ReactWidget } from '@theia/core/lib/browser/widgets/react-widget';
 import { KeybindingRegistry, SingleTextInputDialog, KeySequence, ConfirmDialog, Message, KeybindingScope, SingleTextInputDialogProps, Key } from '@theia/core/lib/browser';
 import { KeymapsParser } from './keymaps-parser';
-import { KeymapsService, KeybindingJson } from './keymaps-service';
+import { KeymapsService } from './keymaps-service';
 import { AlertMessage } from '@theia/core/lib/browser/widgets/alert-message';
 
 /**
@@ -505,28 +505,12 @@ export class KeybindingWidget extends ReactWidget {
     }
 
     /**
-     * Determine if the keybinding currently exists in a user's `keymaps.json`.
-     *
-     * @returns `true` if the keybinding exists.
-     */
-    protected keybindingExistsInJson(keybindings: KeybindingJson[], command: string): boolean {
-        for (let i = 0; i < keybindings.length; i++) {
-            if (keybindings[i].command === command) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * Prompt users to update the keybinding for the given command.
      * @param item the keybinding item.
      */
     protected editKeybinding(item: KeybindingItem): void {
         const command = this.getRawValue(item.command);
-        const id = this.getRawValue(item.id);
         const keybinding = (item.keybinding) ? this.getRawValue(item.keybinding) : '';
-        const context = (item.context) ? this.getRawValue(item.context) : '';
         const dialog = new EditKeybindingDialog({
             title: `Edit Keybinding For ${command}`,
             initialValue: keybinding,
@@ -534,7 +518,11 @@ export class KeybindingWidget extends ReactWidget {
         }, this.keymapsService, item);
         dialog.open().then(async newKeybinding => {
             if (newKeybinding) {
-                await this.keymapsService.setKeybinding({ 'command': id, 'keybinding': newKeybinding, 'context': context });
+                await this.keymapsService.setKeybinding({
+                    command: item.command,
+                    keybinding: newKeybinding,
+                    when: item.context
+                }, keybinding);
             }
         });
     }
