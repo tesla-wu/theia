@@ -43,7 +43,7 @@ export class DefaultWindowService implements WindowService, FrontendApplicationC
 
     openNewWindow(url: string): undefined {
         window.open(url, '_self', 'noopener');
-        console.log('_self');
+        window.location.reload();
         return undefined;
     }
 
